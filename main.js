@@ -1,312 +1,439 @@
-// main.js
 document.addEventListener('DOMContentLoaded', function() {
-    // Mobile Navigation Toggle
-    const hamburger = document.querySelector('.hamburger');
-    const navList = document.querySelector('.nav-list');
-  
-    hamburger.addEventListener('click', function() {
-      this.classList.toggle('active');
-      navList.classList.toggle('active');
-    });
-  
-    // Close mobile menu when clicking a link
-    document.querySelectorAll('.nav-list a').forEach(link => {
-      link.addEventListener('click', () => {
-        hamburger.classList.remove('active');
-        navList.classList.remove('active');
-      });
-    });
-  
-    // Header scroll effect
-    const header = document.querySelector('.header');
-    window.addEventListener('scroll', function() {
-      if (window.scrollY > 100) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
+  try {
+    // Mobile Navigation Toggle with error handling
+    const initMobileMenu = () => {
+      try {
+        const hamburger = document.querySelector('.hamburger');
+        const navList = document.querySelector('.nav-list');
+        
+        if (!hamburger || !navList) {
+          console.warn('Mobile menu elements not found');
+          return;
+        }
+
+        hamburger.addEventListener('click', function() {
+          this.classList.toggle('active');
+          navList.classList.toggle('active');
+          document.body.classList.toggle('no-scroll');
+        });
+
+        const navLinks = document.querySelectorAll('.nav-list a');
+        navLinks.forEach(link => {
+          link.addEventListener('click', () => {
+            hamburger.classList.remove('active');
+            navList.classList.remove('active');
+            document.body.classList.remove('no-scroll');
+          });
+        });
+      } catch (error) {
+        console.error('Mobile menu initialization error:', error);
       }
-    });
-  
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function(e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          window.scrollTo({
-            top: target.offsetTop - 80,
-            behavior: 'smooth'
+    };
+
+    // Smooth scrolling with offset for fixed header
+    const initSmoothScrolling = () => {
+      try {
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+          anchor.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            const targetId = this.getAttribute('href');
+            if (targetId === '#') return;
+            
+            const targetElement = document.querySelector(targetId);
+            if (targetElement) {
+              const header = document.querySelector('.header');
+              const headerHeight = header ? header.offsetHeight : 0;
+              const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - headerHeight;
+              
+              window.scrollTo({
+                top: targetPosition,
+                behavior: 'smooth'
+              });
+            }
+          });
+        });
+      } catch (error) {
+        console.error('Smooth scrolling initialization error:', error);
+      }
+    };
+
+    // Sticky header with throttle
+    const initStickyHeader = () => {
+      try {
+        const header = document.querySelector('.header');
+        if (!header) return;
+
+        let lastScroll = 0;
+        const throttle = (func, limit) => {
+          let lastFunc;
+          let lastRan;
+          return function() {
+            const context = this;
+            const args = arguments;
+            if (!lastRan) {
+              func.apply(context, args);
+              lastRan = Date.now();
+            } else {
+              clearTimeout(lastFunc);
+              lastFunc = setTimeout(function() {
+                if ((Date.now() - lastRan) >= limit) {
+                  func.apply(context, args);
+                  lastRan = Date.now();
+                }
+              }, limit - (Date.now() - lastRan));
+            }
+          };
+        };
+
+        const handleScroll = throttle(function() {
+          const currentScroll = window.pageYOffset;
+          if (currentScroll > 100) {
+            if (currentScroll > lastScroll) {
+              header.classList.remove('scrolled');
+            } else {
+              header.classList.add('scrolled');
+            }
+          } else {
+            header.classList.remove('scrolled');
+          }
+          lastScroll = currentScroll;
+        }, 100);
+
+        window.addEventListener('scroll', handleScroll);
+      } catch (error) {
+        console.error('Sticky header initialization error:', error);
+      }
+    };
+
+    // Portfolio filtering with debounce
+    const initPortfolioFilter = () => {
+      try {
+        const filterButtons = document.querySelectorAll('.portfolio-filter button');
+        const portfolioItems = document.querySelectorAll('.portfolio-item');
+        
+        if (filterButtons.length === 0 || portfolioItems.length === 0) {
+          console.warn('Portfolio filter elements not found');
+          return;
+        }
+
+        const debounce = (func, delay) => {
+          let timeout;
+          return function() {
+            const context = this;
+            const args = arguments;
+            clearTimeout(timeout);
+            timeout = setTimeout(() => func.apply(context, args), delay);
+          };
+        };
+
+        filterButtons.forEach(button => {
+          button.addEventListener('click', debounce(function() {
+            filterButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filterValue = this.getAttribute('data-filter');
+            
+            portfolioItems.forEach(item => {
+              if (filterValue === '*' || item.classList.contains(filterValue.substring(1))) {
+                item.style.display = 'block';
+                setTimeout(() => {
+                  item.style.opacity = '1';
+                  item.style.transform = 'translateY(0)';
+                }, 50);
+              } else {
+                item.style.opacity = '0';
+                item.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                  item.style.display = 'none';
+                }, 300);
+              }
+            });
+          }, 150));
+        });
+      } catch (error) {
+        console.error('Portfolio filter initialization error:', error);
+      }
+    };
+
+    // Testimonial slider with pause on hover
+    const initTestimonialSlider = () => {
+      try {
+        const testimonials = document.querySelectorAll('.testimonial-item');
+        if (testimonials.length === 0) return;
+
+        let currentTestimonial = 0;
+        let sliderInterval;
+        
+        const showTestimonial = (index) => {
+          testimonials.forEach((testimonial, i) => {
+            testimonial.style.display = i === index ? 'block' : 'none';
+            testimonial.style.opacity = i === index ? '1' : '0';
+          });
+        };
+
+        const startSlider = () => {
+          sliderInterval = setInterval(() => {
+            currentTestimonial = (currentTestimonial + 1) % testimonials.length;
+            showTestimonial(currentTestimonial);
+          }, 5000);
+        };
+
+        const sliderContainer = document.querySelector('.testimonials-slider');
+        if (sliderContainer) {
+          sliderContainer.addEventListener('mouseenter', () => {
+            clearInterval(sliderInterval);
+          });
+          
+          sliderContainer.addEventListener('mouseleave', startSlider);
+        }
+
+        showTestimonial(0);
+        startSlider();
+      } catch (error) {
+        console.error('Testimonial slider initialization error:', error);
+      }
+    };
+
+    // Animate skill bars on scroll
+    const initSkillBars = () => {
+      try {
+        const skillBars = document.querySelectorAll('.skill-level');
+        if (skillBars.length === 0) return;
+
+        const skillsSection = document.querySelector('.skills');
+        if (!skillsSection) return;
+
+        const animateSkillBars = () => {
+          skillBars.forEach(bar => {
+            const width = bar.getAttribute('data-width') || bar.style.width;
+            bar.style.width = '0';
+            bar.setAttribute('data-width', width);
+            
+            setTimeout(() => {
+              bar.style.width = width;
+              bar.style.transition = 'width 1.5s var(--ease-out)';
+            }, 100);
+          });
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              animateSkillBars();
+              observer.unobserve(entry.target);
+            }
+          });
+        }, { 
+          threshold: 0.5,
+          rootMargin: '0px 0px -100px 0px'
+        });
+        
+        observer.observe(skillsSection);
+      } catch (error) {
+        console.error('Skill bars initialization error:', error);
+      }
+    };
+
+    // Form submission with validation
+    const initForms = () => {
+      try {
+        // Contact form
+        const contactForm = document.querySelector('.contact-form');
+        if (contactForm) {
+          contactForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            try {
+              submitButton.disabled = true;
+              submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+              
+              const formData = new FormData(this);
+              const response = await fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: { 'Accept': 'application/json' }
+              });
+              
+              if (!response.ok) throw new Error('Network response was not ok');
+              
+              const successMessage = document.createElement('div');
+              successMessage.className = 'form-success';
+              successMessage.innerHTML = '<i class="fas fa-check-circle"></i> Message sent successfully!';
+              this.appendChild(successMessage);
+              
+              this.reset();
+              setTimeout(() => successMessage.remove(), 5000);
+            } catch (error) {
+              const errorMessage = document.createElement('div');
+              errorMessage.className = 'form-error';
+              errorMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> There was a problem sending your message. Please try again.';
+              contactForm.appendChild(errorMessage);
+              setTimeout(() => errorMessage.remove(), 5000);
+            } finally {
+              submitButton.disabled = false;
+              submitButton.innerHTML = originalButtonText;
+            }
           });
         }
-      });
-    });
-  
-    // Portfolio filtering
-    const filterButtons = document.querySelectorAll('.portfolio-filter button');
-    const portfolioItems = document.querySelectorAll('.portfolio-item');
-  
-    filterButtons.forEach(button => {
-      button.addEventListener('click', function() {
-        // Remove active class from all buttons
-        filterButtons.forEach(btn => btn.classList.remove('active'));
-        
-        // Add active class to clicked button
-        this.classList.add('active');
-        
-        const filterValue = this.getAttribute('data-filter');
-        
-        portfolioItems.forEach(item => {
-          if (filterValue === '*' || item.classList.contains(filterValue.substring(1))) {
-            item.style.display = 'block';
+
+        // Newsletter form
+        const newsletterForm = document.querySelector('.newsletter-form');
+        if (newsletterForm) {
+          newsletterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const emailInput = this.querySelector('input[type="email"]');
+            if (!emailInput.value || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInput.value)) {
+              const errorElement = this.querySelector('.email-error') || document.createElement('div');
+              errorElement.className = 'email-error';
+              errorElement.textContent = 'Please enter a valid email address';
+              errorElement.style.color = 'var(--error)';
+              errorElement.style.marginTop = '0.5rem';
+              if (!this.querySelector('.email-error')) {
+                this.appendChild(errorElement);
+              }
+              return;
+            }
+
+            const submitButton = this.querySelector('button[type="submit"]');
+            const originalButtonText = submitButton.innerHTML;
+            
+            submitButton.disabled = true;
+            submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            
             setTimeout(() => {
-              item.style.opacity = '1';
-              item.style.transform = 'translateY(0)';
-            }, 50);
-          } else {
-            item.style.opacity = '0';
-            item.style.transform = 'translateY(20px)';
-            setTimeout(() => {
-              item.style.display = 'none';
-            }, 300);
-          }
-        });
-      });
-    });
-  
-    // Initialize skill bars animation
-    const skillBars = document.querySelectorAll('.skill-level');
-    
-    function animateSkillBars() {
-      skillBars.forEach(bar => {
-        const skillName = bar.parentElement.previousElementSibling.querySelector('span:first-child').textContent;
-        const width = bar.parentElement.previousElementSibling.querySelector('span:last-child').textContent;
-        
-        // Set specific colors for different skills
-        if (skillName.includes('HTML')) bar.style.background = '#e34f26';
-        else if (skillName.includes('CSS')) bar.style.background = '#264de4';
-        else if (skillName.includes('JavaScript')) bar.style.background = '#f7df1e';
-        else if (skillName.includes('React')) bar.style.background = '#61dafb';
-        
-        bar.style.width = '0';
-        setTimeout(() => {
-          bar.style.width = width;
-        }, 100);
-      });
-    }
-  
-    // Animate skills when section is in view
-    const skillsSection = document.querySelector('.skills');
-    const skillsObserver = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateSkillBars();
-          skillsObserver.unobserve(entry.target);
+              const successMessage = document.createElement('p');
+              successMessage.className = 'newsletter-success';
+              successMessage.textContent = 'Thanks for subscribing!';
+              this.appendChild(successMessage);
+              
+              this.reset();
+              submitButton.disabled = false;
+              submitButton.innerHTML = originalButtonText;
+              
+              setTimeout(() => successMessage.remove(), 5000);
+            }, 1500);
+          });
         }
-      });
-    }, { threshold: 0.2 });
-  
-    skillsObserver.observe(skillsSection);
-  
-    // Testimonial slider
-    const testimonialsSlider = document.querySelector('.testimonials-slider');
-    let isDragging = false;
-    let startPos = 0;
-    let currentTranslate = 0;
-    let prevTranslate = 0;
-    let animationID;
-    let currentIndex = 0;
-    const testimonialItems = document.querySelectorAll('.testimonial-item');
-  
-    // Touch events
-    testimonialsSlider.addEventListener('touchstart', touchStart);
-    testimonialsSlider.addEventListener('touchend', touchEnd);
-    testimonialsSlider.addEventListener('touchmove', touchMove);
-  
-    // Mouse events
-    testimonialsSlider.addEventListener('mousedown', touchStart);
-    testimonialsSlider.addEventListener('mouseup', touchEnd);
-    testimonialsSlider.addEventListener('mouseleave', touchEnd);
-    testimonialsSlider.addEventListener('mousemove', touchMove);
-  
-    // Disable context menu
-    testimonialsSlider.addEventListener('contextmenu', (e) => {
-      e.preventDefault();
-    });
-  
-    function touchStart(e) {
-      if (e.type === 'touchstart') {
-        startPos = e.touches[0].clientX;
-      } else {
-        startPos = e.clientX;
-        isDragging = true;
+      } catch (error) {
+        console.error('Form initialization error:', error);
       }
-      animationID = requestAnimationFrame(animation);
-      testimonialsSlider.style.cursor = 'grabbing';
-    }
-  
-    function touchEnd() {
-      isDragging = false;
-      cancelAnimationFrame(animationID);
-      
-      const movedBy = currentTranslate - prevTranslate;
-      
-      if (movedBy < -100 && currentIndex < testimonialItems.length - 1) {
-        currentIndex += 1;
-      }
-      
-      if (movedBy > 100 && currentIndex > 0) {
-        currentIndex -= 1;
-      }
-      
-      setPositionByIndex();
-      testimonialsSlider.style.cursor = 'grab';
-    }
-  
-    function touchMove(e) {
-      if (isDragging) {
-        const currentPosition = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
-        currentTranslate = prevTranslate + currentPosition - startPos;
-      }
-    }
-  
-    function animation() {
-      setSliderPosition();
-      if (isDragging) requestAnimationFrame(animation);
-    }
-  
-    function setSliderPosition() {
-      testimonialsSlider.style.transform = `translateX(${currentTranslate}px)`;
-    }
-  
-    function setPositionByIndex() {
-      currentTranslate = currentIndex * -window.innerWidth;
-      prevTranslate = currentTranslate;
-      setSliderPosition();
-    }
-  
-    // Form submission
-    const contactForm = document.querySelector('.contact-form');
-    if (contactForm) {
-      contactForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        // Get form values
-        const formData = new FormData(this);
-        const data = Object.fromEntries(formData);
-        
-        // Here you would typically send the data to a server
-        console.log('Form submitted:', data);
-        
-        // Show success message
-        const submitButton = this.querySelector('button[type="submit"]');
-        submitButton.textContent = 'Message Sent!';
-        submitButton.style.backgroundColor = '#4BB543';
-        
-        // Reset form after 3 seconds
-        setTimeout(() => {
-          this.reset();
-          submitButton.textContent = 'Send Message';
-          submitButton.style.backgroundColor = '';
-        }, 3000);
-      });
-    }
-  
-    // Blog search functionality (example)
-    const searchInput = document.createElement('input');
-    searchInput.setAttribute('type', 'text');
-    searchInput.setAttribute('placeholder', 'Search blog posts...');
-    searchInput.style.marginBottom = '20px';
-    searchInput.style.padding = '10px';
-    searchInput.style.width = '100%';
-    searchInput.style.borderRadius = 'var(--border-radius)';
-    searchInput.style.border = '1px solid #eee';
-    
-    const blogSection = document.querySelector('.main-content');
-    if (blogSection) {
-      blogSection.insertBefore(searchInput, blogSection.firstChild);
-      
-      searchInput.addEventListener('input', function() {
-        const searchTerm = this.value.toLowerCase();
-        const blogPosts = document.querySelectorAll('.blog-post');
-        
-        blogPosts.forEach(post => {
-          const title = post.querySelector('.post-title').textContent.toLowerCase();
-          const excerpt = post.querySelector('.post-excerpt').textContent.toLowerCase();
-          
-          if (title.includes(searchTerm) || excerpt.includes(searchTerm)) {
-            post.style.display = 'block';
-          } else {
-            post.style.display = 'none';
-          }
+    };
+
+    // Scroll animations with IntersectionObserver
+    const initScrollAnimations = () => {
+      try {
+        const animateElements = document.querySelectorAll('.animate-on-scroll');
+        if (animateElements.length === 0) return;
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('animated');
+              observer.unobserve(entry.target);
+            }
+          });
+        }, {
+          threshold: 0.1,
+          rootMargin: '0px 0px -100px 0px'
         });
-      });
-    }
-  
-    // Dark mode toggle (optional)
-    const darkModeToggle = document.createElement('div');
-    darkModeToggle.innerHTML = '<i class="fas fa-moon"></i>';
-    darkModeToggle.style.position = 'fixed';
-    darkModeToggle.style.bottom = '20px';
-    darkModeToggle.style.right = '20px';
-    darkModeToggle.style.width = '50px';
-    darkModeToggle.style.height = '50px';
-    darkModeToggle.style.backgroundColor = 'var(--primary-color)';
-    darkModeToggle.style.color = 'white';
-    darkModeToggle.style.borderRadius = '50%';
-    darkModeToggle.style.display = 'flex';
-    darkModeToggle.style.alignItems = 'center';
-    darkModeToggle.style.justifyContent = 'center';
-    darkModeToggle.style.cursor = 'pointer';
-    darkModeToggle.style.zIndex = '100';
-    darkModeToggle.style.boxShadow = '0 4px 10px rgba(0,0,0,0.2)';
-    
-    document.body.appendChild(darkModeToggle);
-    
-    darkModeToggle.addEventListener('click', function() {
-      document.body.classList.toggle('dark-mode');
-      
-      if (document.body.classList.contains('dark-mode')) {
-        this.innerHTML = '<i class="fas fa-sun"></i>';
-        localStorage.setItem('darkMode', 'enabled');
-      } else {
-        this.innerHTML = '<i class="fas fa-moon"></i>';
-        localStorage.setItem('darkMode', 'disabled');
+
+        animateElements.forEach(element => {
+          observer.observe(element);
+        });
+      } catch (error) {
+        console.error('Scroll animations initialization error:', error);
       }
-    });
-    
-    // Check for saved dark mode preference
-    if (localStorage.getItem('darkMode') === 'enabled') {
-      document.body.classList.add('dark-mode');
-      darkModeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-    }
-  
-    // Add dark mode styles
-    const style = document.createElement('style');
-    style.textContent = `
-      .dark-mode {
-        --dark-color: #f8fafc;
-        --light-color: #1a202c;
-        --text-color: #e2e8f0;
-        --text-light: #a0aec0;
-        --white: #2d3748;
-        --black: #f8fafc;
+    };
+
+    // Back to top button
+    const initBackToTop = () => {
+      try {
+        const backToTopButton = document.createElement('button');
+        backToTopButton.className = 'back-to-top';
+        backToTopButton.innerHTML = '<i class="fas fa-arrow-up"></i>';
+        backToTopButton.setAttribute('aria-label', 'Back to top');
+        document.body.appendChild(backToTopButton);
+        
+        backToTopButton.addEventListener('click', () => {
+          window.scrollTo({
+            top: 0,
+            behavior: 'smooth'
+          });
+        });
+        
+        window.addEventListener('scroll', () => {
+          backToTopButton.classList.toggle('show', window.pageYOffset > 300);
+        });
+      } catch (error) {
+        console.error('Back to top button initialization error:', error);
       }
-      
-      .dark-mode .header {
-        background-color: rgba(45, 55, 72, 0.98) !important;
+    };
+
+    // Portfolio item hover effects
+    const initPortfolioHover = () => {
+      try {
+        const portfolioItems = document.querySelectorAll('.portfolio-item');
+        if (portfolioItems.length === 0) return;
+
+        portfolioItems.forEach(item => {
+          const overlay = item.querySelector('.portfolio-overlay');
+          if (!overlay) return;
+
+          // Initialize state
+          overlay.style.opacity = '0';
+          overlay.style.transform = 'translateY(20px)';
+          overlay.style.visibility = 'hidden';
+
+          item.addEventListener('mouseenter', () => {
+            overlay.style.transition = 'opacity 0.3s ease, transform 0.3s ease';
+            overlay.style.opacity = '1';
+            overlay.style.transform = 'translateY(0)';
+            overlay.style.visibility = 'visible';
+          });
+          
+          item.addEventListener('mouseleave', () => {
+            overlay.style.transition = 'opacity 0.3s ease, transform 0.3s ease, visibility 0.3s 0.3s';
+            overlay.style.opacity = '0';
+            overlay.style.transform = 'translateY(20px)';
+            overlay.style.visibility = 'hidden';
+          });
+        });
+      } catch (error) {
+        console.error('Portfolio hover effects initialization error:', error);
       }
-      
-      .dark-mode .portfolio-item,
-      .dark-mode .skill-category,
-      .dark-mode .timeline-content,
-      .dark-mode .testimonial-content,
-      .dark-mode .blog-post,
-      .dark-mode .sidebar-widget,
-      .dark-mode .contact-info,
-      .dark-mode .contact-form {
-        background-color: #2d3748 !important;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3) !important;
+    };
+
+    // Update copyright year
+    const updateCopyrightYear = () => {
+      try {
+        const footerText = document.querySelector('.footer-bottom p');
+        if (footerText) {
+          footerText.innerHTML = `&copy; ${new Date().getFullYear()} Douglas Oroko. All Rights Reserved.`;
+        }
+      } catch (error) {
+        console.error('Copyright year update error:', error);
       }
-    `;
-    document.head.appendChild(style);
-  });
+    };
+
+    // Initialize all components
+    initMobileMenu();
+    initSmoothScrolling();
+    initStickyHeader();
+    initPortfolioFilter();
+    initTestimonialSlider();
+    initSkillBars();
+    initForms();
+    initScrollAnimations();
+    initBackToTop();
+    initPortfolioHover();
+    updateCopyrightYear();
+
+  } catch (error) {
+    console.error('Main initialization error:', error);
+  }
+});
